@@ -22,6 +22,16 @@ The PWM signal is converted to clean analog CV using:
 1. Two cascaded RC low-pass filters (10kΩ + 100nF each) to smooth the PWM
 2. Op-amp buffer for clean output and current drive capability (positive supply at 12V, negative at GND)
 
+## Getting Started with PlatformIO
+
+This project uses PlatformIO for development and deployment.
+
+1. [Install PlatformIO](https://platformio.org/install) (VS Code extension recommended)
+2. Connect your Arduino Uno via USB
+3. Use the PlatformIO interface to build and upload, or run `pio run --target upload` from the command line
+
+For detailed instructions, see the [PlatformIO Quick Start Guide](https://docs.platformio.org/en/latest/integration/ide/vscode.html#quick-start).
+
 ## Usage
 
 Currently runs an automatic sequence cycling through musical notes with appropriate control voltages based on the 1V per octave standard.
