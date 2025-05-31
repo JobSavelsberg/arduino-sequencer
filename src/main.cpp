@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include "pwm_controller.h"
+#include "hardware/pwm_controller.h"
 
 #define BPM_POT A0      // Pin for BPM input (potentiometer)
 #define POT A1          // Pin for additional potentiometer
@@ -44,15 +44,15 @@ void setCVNote(int note)
   float voltage = (note - BASE_0V_NOTE) / 12.0;
   float clampedVoltage = constrain(voltage, 0.0, MAX_VOLTAGE);
   float dutyCycle = clampedVoltage / MAX_VOLTAGE;
-  setPWMDutyCycle(dutyCycle);
+  hardware::setPWMDutyCycle(dutyCycle);
 }
 
 void setup()
 {
   // Initialize PWM system
-  initPWM();
-  setPWMFrequency(PWM_FREQUENCY);
-  setPWMDutyCycle(0);
+  hardware::initPWM();
+  hardware::setPWMFrequency(PWM_FREQUENCY);
+  hardware::setPWMDutyCycle(0);
 
   pinMode(PLAY_BUTTON, INPUT_PULLUP); // Use internal pull-up resistor
 
