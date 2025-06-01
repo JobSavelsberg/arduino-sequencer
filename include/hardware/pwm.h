@@ -1,25 +1,18 @@
-#ifndef PWM_CONTROLLER_H
-#define PWM_CONTROLLER_H
+#ifndef PWM_H
+#define PWM_H
 
 #include <Arduino.h>
-namespace hardware
+
+class PWM
 {
-    /**
-     * Initialize PWM on Timer1 (Pin 9) with Fast PWM mode
-     */
-    void initPWM();
+private:
+    int pin;
+    bool initialized;
 
-    /**
-     * Set PWM frequency in Hz
-     * @param freq_hz Desired frequency in Hz
-     */
-    void setPWMFrequency(float freq_hz);
+public:
+    PWM(int pwmPin);
+    void setup(float freq_hz = 20000.0);
+    void setDutyCycle(float duty_cycle);
+};
 
-    /**
-     * Set PWM duty cycle as a normalized value
-     * @param duty_cycle Duty cycle (0.0 - 1.0)
-     */
-    void setPWMDutyCycle(float duty_cycle);
-
-}
-#endif // PWM_CONTROLLER_H
+#endif // PWM_H

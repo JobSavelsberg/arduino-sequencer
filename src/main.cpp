@@ -23,6 +23,8 @@ LED rightLED(13);
 // Button controller
 Button playButton(PLAY_BUTTON);
 
+PWM cvOutPitch(9); // PWM output for CV pitch control
+
 /**
  * @brief Read potentiometer with logarithmic curve mapping
  * @param pin Analog pin to read from (0-1023)
@@ -51,7 +53,7 @@ void setCVNote(int note)
   float voltage = (note - BASE_0V_NOTE) / 12.0;
   float clampedVoltage = constrain(voltage, 0.0, MAX_VOLTAGE);
   float dutyCycle = clampedVoltage / MAX_VOLTAGE; // Normalize to 0.0 - 1.0 range
-  hardware::setPWMDutyCycle(dutyCycle);           // Set PWM duty cycle based on voltage
+  cvOutPitch.setDutyCycle(dutyCycle);             // Set PWM duty cycle based on voltage
 }
 
 // Major C2 to C3 scale in MIDI notes
@@ -65,8 +67,7 @@ const unsigned long BPM_READ_INTERVAL = 50; // Read BPM every 50ms
 
 void setup()
 {
-  hardware::initPWM();
-  hardware::setPWMFrequency(20000.0); // Set PWM frequency to 1kHz
+  cvOutPitch.setup(20000); // Initialize PWM hardware with default 20kHz frequency
 }
 
 void loop()
