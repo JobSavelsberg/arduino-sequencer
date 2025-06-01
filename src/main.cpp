@@ -1,13 +1,12 @@
 #include <Arduino.h>
 #include "hardware/pwm_controller.h"
+#include "hardware/led_controller.h"
 
-#define BPM_POT A0      // Pin for BPM input (potentiometer)
-#define POT A1          // Pin for additional potentiometer
-#define SELECTOR_POT A2 // Pin for selector potentiometer
+#define POT_A A3 // Pin for BPM input (potentiometer)
+#define POT_B A2 // Pin for additional potentiometer
+#define POT_C A1 // Pin for selector potentiometer
 
 #define PLAY_BUTTON 2 // Pin for play/stop button
-#define YELLOW_LED 13 // Pin for external LED (if used)
-#define RED_LED 12    // Built-in LED for playback indication
 
 const float MAX_VOLTAGE = 5.0; // Maximum output voltage for CV
 
@@ -16,6 +15,10 @@ const int BASE_0V_NOTE = 36;         // C2
 const float PWM_FREQUENCY = 20000.0; // PWM frequency in Hz
 
 float bpm = 120.0; // Current beats per minute
+
+// LED controllers
+LED leftLED(12);
+LED rightLED(13);
 
 /**
  * @brief Read potentiometer with logarithmic curve mapping
@@ -51,18 +54,10 @@ void setCVNote(int note, hardware::PWMChannel channel = hardware::PWM_CHANNEL_9)
 void setup()
 {
   // Initialize only specific PWM channels you want to use - no need to track array size!
-  hardware::PWMChannel channels[] = {hardware::PWM_CHANNEL_9, hardware::PWM_CHANNEL_10, hardware::PWM_CHANNEL_11, hardware::PWM_CHANNEL_3};
+  hardware::PWMChannel channels[] = {hardware::PWM_CHANNEL_9};
   hardware::initPWM(channels, sizeof(channels) / sizeof(hardware::PWMChannel));
-
-  // Set frequency for both timers
   hardware::setPWMFrequency(PWM_FREQUENCY);
-
   pinMode(PLAY_BUTTON, INPUT_PULLUP); // Use internal pull-up resistor
-
-  pinMode(RED_LED, OUTPUT);      // Set red LED pin as output
-  pinMode(YELLOW_LED, OUTPUT);   // Set yellow LED pin as output
-  digitalWrite(RED_LED, LOW);    // Start with red LED off
-  digitalWrite(YELLOW_LED, LOW); // Start with yellow LED off
 }
 
 // Major C2 to C3 scale in MIDI notes
@@ -71,8 +66,6 @@ const int numNotes = sizeof(midiNotes) / sizeof(midiNotes[0]); // Number of note
 
 unsigned long previousNoteTime = 0; // Timestamp of the last note played
 int currentNoteIndex = 0;           // Index of the current note in the scale
-unsigned long ledOnTime = 0;        // Timestamp when LED was turned on
-bool ledState = false;              // Current LED state
 
 void loop()
 {
@@ -90,23 +83,18 @@ void loop()
     setCVNote(harmonyNote, hardware::PWM_CHANNEL_10);
 
     // Play a fifth on pin 11
-    int fifthNote = midiNotes[currentNoteIndex] + 7; // Perfect fifth
-    setCVNote(fifthNote, hardware::PWM_CHANNEL_11);
-
-    // Play an octave on pin 3
+    int fifthNote = midiNotes[currentNoteIndex] + 7;   // Perfect fifth
+    setCVNote(fifthNote, hardware::PWM_CHANNEL_11);    // Play an octave on pin 3
     int octaveNote = midiNotes[currentNoteIndex] + 12; // Octave higher
     setCVNote(octaveNote, hardware::PWM_CHANNEL_3);
 
     // Turn on LED for beat indication
-    digitalWrite(YELLOW_LED, HIGH);
+    rightLED.blink(noteDuration / 8);
 
     if (currentNoteIndex == 0)
     {
-      digitalWrite(RED_LED, HIGH);
+      leftLED.blink(noteDuration / 4); // Longer blink for first beat
     }
-
-    ledOnTime = currentTime;
-    ledState = true;
 
     // Move to the next note
     currentNoteIndex = (currentNoteIndex + 1) % numNotes;
@@ -114,20 +102,12 @@ void loop()
     previousNoteTime = currentTime;
   }
 
-  // Handle LED timing - longer for first beat (note index 0), shorter for others
-  if (ledState)
-  {
-    unsigned long ledDuration = (currentNoteIndex == 1) ? noteDuration / 4 : noteDuration / 8; // Longer for first beat
-    if (currentTime - ledOnTime >= ledDuration)
-    {
-      digitalWrite(YELLOW_LED, LOW);
-      digitalWrite(RED_LED, LOW);
-      ledState = false;
-    }
-  }
+  // Update LED controllers (handles blink timing automatically)
+  leftLED.update();
+  rightLED.update();
 
   // Update BPM from potentiometer
-  bpm = readLogPot(BPM_POT, 60.0, 1000.0, 2.0); // Reset when the button is pressed
+  bpm = readLogPot(POT_A, 60.0, 1000.0, 2.0); // Reset when the button is pressed
   if (digitalRead(PLAY_BUTTON) == LOW)
   {
     currentNoteIndex = 0;                                            // Reset to the first note
