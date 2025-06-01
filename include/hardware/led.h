@@ -1,5 +1,5 @@
-#ifndef LED_CONTROLLER_H
-#define LED_CONTROLLER_H
+#ifndef LED_H
+#define LED_H
 
 #include <Arduino.h>
 
@@ -19,4 +19,4 @@ public:
     void update();
 };
 
-#endif // LED_CONTROLLER_H
+#endif // LED_H
