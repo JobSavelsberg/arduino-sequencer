@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include "sequence.h"
 
 Sequence::Sequence(int maxSequenceLength)
@@ -6,10 +7,14 @@ Sequence::Sequence(int maxSequenceLength)
     // Allocate memory for the notes array
     notes = new int[maxNotes];
 
-    // Initialize all notes to 0
+    // Allocate memory for the gate durations array
+    gateDurations = new float[maxNotes];
+
+    // Initialize all notes to 0 and gate durations to 0.5 (50%)
     for (int i = 0; i < maxNotes; i++)
     {
         notes[i] = 0;
+        gateDurations[i] = 0.5f; // Default 50% gate duration
     }
 }
 
@@ -20,6 +25,11 @@ Sequence::~Sequence()
     {
         delete[] notes;
         notes = nullptr;
+    }
+    if (gateDurations != nullptr)
+    {
+        delete[] gateDurations;
+        gateDurations = nullptr;
     }
 }
 
@@ -81,6 +91,7 @@ void Sequence::clear()
     for (int i = 0; i < maxNotes; i++)
     {
         notes[i] = 0;
+        gateDurations[i] = 0.5f; // Reset to default 50% gate duration
     }
     currentNumNotes = 0;
 }
@@ -131,6 +142,35 @@ void Sequence::transpose(int semitones)
                 notes[i] = CV_MIN_NOTE;
             else if (notes[i] > CV_MAX_NOTE)
                 notes[i] = CV_MAX_NOTE;
+        }
+    }
+}
+
+void Sequence::setGateDuration(int stepIndex, float duration)
+{
+    if (stepIndex >= 0 && stepIndex < maxNotes)
+    {
+        // Clamp duration to valid range (0.0 to 1.0)
+        gateDurations[stepIndex] = constrain(duration, 0.0f, 1.0f);
+    }
+}
+
+float Sequence::getGateDuration(int stepIndex)
+{
+    if (stepIndex >= 0 && stepIndex < currentNumNotes)
+    {
+        return gateDurations[stepIndex];
+    }
+    return 0.5f; // Return default 50% for out-of-bounds
+}
+
+void Sequence::setGateDurations(float *durations, int length)
+{
+    if (length > 0 && length <= maxNotes)
+    {
+        for (int i = 0; i < length; i++)
+        {
+            gateDurations[i] = constrain(durations[i], 0.0f, 1.0f);
         }
     }
 }

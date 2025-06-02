@@ -5,6 +5,7 @@
 #include "hardware/button.h"
 #include "hardware/pot.h"
 #include "hardware/display.h"
+#include "hardware/gate.h"
 #include "sequence.h"
 #include "sequence_player.h"
 
@@ -28,6 +29,9 @@ Pot modulationPot(1, 0.01f, 1); // 10ms read interval, no smoothing to save memo
 
 // CV output
 PWM cvOutPitch(9, MAX_VOLTAGE);
+
+// CV Gate output
+Gate cvGate(8);
 
 // Create display object
 Display oledDisplay;
@@ -113,24 +117,29 @@ void drawUI()
       if (note > HIGHEST_NOTE || HIGHEST_NOTE == 0)
         HIGHEST_NOTE = note;
     }
-
     for (int i = 0; i < mainSequence.getLength(); i++)
     {
       int x = SEQ_START_X + (i * STEP_WIDTH);
       int note = mainSequence.getNote(i);
+      float gateDuration = mainSequence.getGateDuration(i);
 
       // Map note to height (higher notes = taller rectangles)
       int noteHeight = map(note, LOWEST_NOTE, HIGHEST_NOTE, 3, SEQ_HEIGHT); // Map MIDI range to pixel height
       int y = SEQ_START_Y + SEQ_HEIGHT - noteHeight;
 
+      // Calculate gate width based on gate duration (0.0 to 1.0)
+      int gateWidth = (int)(STEP_WIDTH * gateDuration);
+      if (gateWidth < 1)
+        gateWidth = 1; // Minimum 1 pixel width
+
       // Draw rectangle - filled if current step, outline if not
       if (i == player.getCurrentStep())
       {
-        u8g2.drawBox(x, y, STEP_WIDTH, noteHeight); // Filled rectangle for current step
+        u8g2.drawBox(x, y, gateWidth, noteHeight); // Filled rectangle for current step
       }
       else
       {
-        u8g2.drawFrame(x, y, STEP_WIDTH, noteHeight); // Outline rectangle for other steps
+        u8g2.drawFrame(x, y, gateWidth, noteHeight); // Outline rectangle for other steps
       }
     }
     // Draw current step indicator
@@ -157,6 +166,11 @@ void onSequencerStep(int currentStep, int currentNote, float noteDurationSeconds
 {
   // Play the current note
   setCVNote(currentNote);
+
+  // Trigger CV gate output using the gate duration from the sequence
+  float gateDuration = mainSequence.getGateDuration(currentStep);
+  cvGate.trigger(noteDurationSeconds * gateDuration);
+
   // Calculate blink durations
   float rightBlinkDuration = noteDurationSeconds / 2;
   float leftBlinkDuration = noteDurationSeconds;
@@ -196,18 +210,23 @@ void update(float dt)
   timingPot.update(dt);
   pitchPot.update(dt);
   modulationPot.update(dt); // Now update the modulation pot
-
   playButton.update(dt);
   leftButton.update(dt);
   rightButton.update(dt);
 
-  // Update BPM from potentiometer
-  float newBpm = timingPot.getLogValue(60.0, 1000.0, 2.0);
-  if (timingPot.hasChanged(10)) // Only update if significant change
+  // Handle timing pot usage based on mode
+  if (player.getIsPlaying())
   {
-    player.setBpm(newBpm);
-    lastBpmChangeTime = totalTime; // Record when BPM was changed
-  } // Update pitch from potentiometer
+    // Playing mode: Use timing pot for BPM control
+    float newBpm = timingPot.getLogValue(60.0, 1000.0, 2.0);
+    if (timingPot.hasChanged(10)) // Only update if significant change
+    {
+      player.setBpm(newBpm);
+      lastBpmChangeTime = totalTime; // Record when BPM was changed
+    }
+  }
+
+  // Update pitch from potentiometer
   if (!player.getIsPlaying())
   {
     // Edit mode: Use modulation pot to control pitch range (1-5 octaves)
@@ -220,6 +239,14 @@ void update(float dt)
       mainSequence.setNote(player.getCurrentStep(), newNote);
       setCVNote(newNote); // Update CV output immediately
       drawUI();           // Refresh display immediately
+    }
+
+    // Edit mode: Use timing pot to control gate duration (10% to 100%)
+    float newGateDuration = timingPot.getLinearValue(0.1, 1.0); // 10% to 100%
+    if (timingPot.hasChanged(10))                               // Only update if significant change
+    {
+      mainSequence.setGateDuration(player.getCurrentStep(), newGateDuration);
+      drawUI(); // Refresh display immediately
     }
   }
   else
@@ -293,10 +320,10 @@ void update(float dt)
 
   // Update the player with the time delta
   player.update(dt);
-
   // Update outputs
   leftLED.update(dt);
   rightLED.update(dt);
+  cvGate.update(dt);
 }
 
 void loop()

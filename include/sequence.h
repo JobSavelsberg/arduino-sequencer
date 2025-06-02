@@ -4,9 +4,10 @@
 class Sequence
 {
 private:
-    int *notes;          // Array of MIDI note numbers
-    int maxNotes;        // Maximum number of notes the sequence can hold
-    int currentNumNotes; // Current number of notes in the sequence
+    int *notes;           // Array of MIDI note numbers
+    float *gateDurations; // Array of gate durations (0.0 to 1.0, as fraction of note duration)
+    int maxNotes;         // Maximum number of notes the sequence can hold
+    int currentNumNotes;  // Current number of notes in the sequence
 
 public:
     // Constructor and destructor
@@ -22,6 +23,11 @@ public:
     int getMaxLength();
     void clear();
     void transpose(int semitones);
+
+    // Gate duration operations
+    void setGateDuration(int stepIndex, float duration); // duration: 0.0 to 1.0
+    float getGateDuration(int stepIndex);
+    void setGateDurations(float *durations, int length);
 };
 
 #endif // SEQUENCE_H
