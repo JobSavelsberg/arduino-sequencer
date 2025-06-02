@@ -146,6 +146,65 @@ void Sequence::transpose(int semitones)
     }
 }
 
+void Sequence::randomize(int rootNote, int octaves, int scaleType)
+{
+    // Define various scales/modes as intervals from root note
+    const int scalePatterns[][12] = {
+        {0, 2, 4, 5, 7, 9, 11, -1}, // Major scale (Ionian)
+        {0, 2, 3, 5, 7, 9, 10, -1}, // Natural minor (Aeolian)
+        {0, 2, 3, 5, 7, 8, 11, -1}, // Harmonic minor
+        {0, 2, 4, 6, 7, 9, 11, -1}, // Lydian
+        {0, 2, 4, 5, 7, 9, 10, -1}, // Mixolydian
+        {0, 2, 3, 5, 7, 9, 11, -1}, // Dorian
+        {0, 1, 3, 5, 6, 8, 10, -1}, // Phrygian
+        {0, 2, 4, 7, 9, -1},        // Pentatonic major
+        {0, 3, 5, 7, 10, -1},       // Pentatonic minor
+        {0, 1, 4, 5, 7, 8, 11, -1}, // Blues scale
+    };
+
+    const int numScales = 10;
+    scaleType = constrain(scaleType, 0, numScales - 1);
+
+    // Clamp parameters
+    rootNote = constrain(rootNote, 0, 127);
+    octaves = constrain(octaves, 1, 8);
+
+    // Build note pool from the selected scale across multiple octaves
+    int notePool[84]; // Maximum possible notes (12 * 7 octaves)
+    int notePoolSize = 0;
+
+    for (int octave = 0; octave < octaves; octave++)
+    {
+        for (int i = 0; i < 12; i++)
+        {
+            if (scalePatterns[scaleType][i] == -1)
+                break; // End of scale pattern
+
+            int note = rootNote + (octave * 12) + scalePatterns[scaleType][i];
+            if (note <= 127) // Stay within MIDI range
+            {
+                notePool[notePoolSize++] = note;
+            }
+        }
+    }
+
+    // Randomize all notes in the current sequence length
+    for (int i = 0; i < currentNumNotes; i++)
+    {
+        if (notePoolSize > 0)
+        {
+            notes[i] = notePool[random(notePoolSize)];
+        }
+        else
+        {
+            notes[i] = rootNote; // Fallback
+        }
+
+        // Also randomize gate durations between 20% and 100%
+        gateDurations[i] = random(200, 1001) / 1000.0f; // 0.2 to 1.0
+    }
+}
+
 void Sequence::setGateDuration(int stepIndex, float duration)
 {
     if (stepIndex >= 0 && stepIndex < maxNotes)

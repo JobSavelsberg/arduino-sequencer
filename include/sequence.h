@@ -23,6 +23,7 @@ public:
     int getMaxLength();
     void clear();
     void transpose(int semitones);
+    void randomize(int rootNote = 36, int octaves = 3, int scaleType = 0); // Randomize notes from a scale
 
     // Gate duration operations
     void setGateDuration(int stepIndex, float duration); // duration: 0.0 to 1.0

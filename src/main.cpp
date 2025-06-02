@@ -45,8 +45,30 @@ static float lastBpmChangeTime = 0.0f;
 static float totalTime = 0.0f;
 const float BPM_DISPLAY_DURATION = 3.0f; // Show BPM for 3 seconds after change
 
+// Scale display timing
+static float lastScaleChangeTime = 0.0f;
+static int lastScaleType = -1;             // Track last scale type to detect changes
+const float SCALE_DISPLAY_DURATION = 3.0f; // Show scale for 3 seconds after change
+
 // Transpose tracking
 static int currentTranspose = 0; // Current transpose amount in semitones
+
+/*
+ * Available scales for randomization (selected by modulation pot):
+ * 0 = Major scale (Ionian)
+ * 1 = Natural minor (Aeolian)
+ * 2 = Harmonic minor
+ * 3 = Lydian
+ * 4 = Mixolydian
+ * 5 = Dorian
+ * 6 = Phrygian
+ * 7 = Pentatonic major
+ * 8 = Pentatonic minor
+ * 9 = Blues scale
+ */
+
+// Function declarations
+void scaleTypeToString(int scaleType, char *scaleStr);
 
 /**
  * @brief Convert MIDI note number to note name string (e.g., "C#3")
@@ -85,7 +107,6 @@ void drawUI()
     return;
 
   auto &u8g2 = oledDisplay.getU8g2();
-
   u8g2.firstPage(); // Start page mode rendering
   do
   {
@@ -99,10 +120,30 @@ void drawUI()
       u8g2.drawStr(1, 8, bpmStr);
     }
 
+    // Draw current scale type only if it has changed in the last 3 seconds
+    int currentScaleType = (int)modulationPot.getLinearValue(0, 9.99);
+
+    // Check if scale type has changed
+    if (currentScaleType != lastScaleType)
+    {
+      lastScaleType = currentScaleType;
+      lastScaleChangeTime = totalTime;
+    }
+
+    // Also don't show scale when bpm is shown, otherwise they overlap
+    if (totalTime - lastScaleChangeTime <= SCALE_DISPLAY_DURATION && totalTime - lastBpmChangeTime > BPM_DISPLAY_DURATION)
+    {
+      char scaleStr[16];
+      char scaleDisplayStr[24];
+      scaleTypeToString(currentScaleType, scaleStr);
+      sprintf(scaleDisplayStr, "Scale: %s", scaleStr);
+      u8g2.drawStr(1, 8, scaleDisplayStr); // Position below BPM display
+    }
+
     // Draw sequence visualization
     const int SEQ_START_X = 0;
-    const int SEQ_START_Y = 0;
-    const int SEQ_HEIGHT = 64 - 10;
+    const int SEQ_START_Y = 10;                             // Move down to make room for scale display
+    const int SEQ_HEIGHT = 64 - 20;                        // Reduce height to accommodate scale text
     const int STEP_WIDTH = 128 / mainSequence.getLength(); // Width of each step rectangle
 
     int LOWEST_NOTE = 127;
@@ -218,7 +259,7 @@ void update(float dt)
   if (player.getIsPlaying())
   {
     // Playing mode: Use timing pot for BPM control
-    float newBpm = timingPot.getLogValue(60.0, 1000.0, 2.0);
+    float newBpm = timingPot.getLogValue(60.0, 500.0, 2.0);
     if (timingPot.hasChanged(10)) // Only update if significant change
     {
       player.setBpm(newBpm);
@@ -288,33 +329,101 @@ void update(float dt)
       // Reset transpose when starting
       currentTranspose = 0;
     }
+  } // Button handling depends on play mode
+  // Check for both buttons pressed simultaneously (randomize sequence) - highest priority
+  static bool lastBothPressed = false;
+  static bool justReleasedBoth = false;
+  bool bothCurrentlyPressed = leftButton.isPressed() && rightButton.isPressed();
+  if (bothCurrentlyPressed && !lastBothPressed)
+  {
+    // Both buttons just pressed - randomize sequence
+    // Use modulation pot to select scale type (0-9 scales)
+    int scaleType = (int)modulationPot.getLinearValue(0, 9.99); // 0-9 scale types
+    mainSequence.randomize(BASE_0V_NOTE, 3, scaleType);         // Root=C2, 3 octaves, selected scale
+    setCVNote(mainSequence.getNote(player.getCurrentStep()));
+
+    // Update scale display timing to show the scale used for randomization
+    lastScaleType = scaleType;
+    lastScaleChangeTime = totalTime;
+
+    drawUI();
   }
 
-  // Note edit mode: when paused, use left/right buttons to step through notes
-  if (!player.getIsPlaying())
+  // Track when both buttons were just released
+  if (lastBothPressed && !bothCurrentlyPressed)
   {
-    if (leftButton.wasPressed())
-    {
-      // Move to previous step
-      int currentStep = player.getCurrentStep();
-      int newStep = (currentStep - 1 + mainSequence.getLength()) % mainSequence.getLength();
-      player.setCurrentStep(newStep);
+    justReleasedBoth = true;
+  }
+  else if (!leftButton.isPressed() && !rightButton.isPressed())
+  {
+    // Reset the flag when both buttons are fully released
+    justReleasedBoth = false;
+  }
 
-      // Play the note and update CV output
-      setCVNote(mainSequence.getNote(newStep));
-      drawUI(); // Refresh display immediately
+  lastBothPressed = bothCurrentlyPressed;
+  // Only process individual button presses if both buttons are not currently pressed
+  // and we didn't just release both buttons
+  if (!bothCurrentlyPressed && !justReleasedBoth)
+  {
+    if (!player.getIsPlaying())
+    {
+      // Note edit mode: when paused, use left/right buttons to step through notes
+      if (leftButton.wasReleased())
+      {
+        // Move to previous step
+        int currentStep = player.getCurrentStep();
+        int newStep = (currentStep - 1 + mainSequence.getLength()) % mainSequence.getLength();
+        player.setCurrentStep(newStep);
+
+        // Play the note and update CV output
+        setCVNote(mainSequence.getNote(newStep));
+        drawUI(); // Refresh display immediately
+      }
+
+      if (rightButton.wasReleased())
+      {
+        // Move to next step
+        int currentStep = player.getCurrentStep();
+        int newStep = (currentStep + 1) % mainSequence.getLength();
+        player.setCurrentStep(newStep);
+
+        // Play the note and update CV output
+        setCVNote(mainSequence.getNote(newStep));
+        drawUI(); // Refresh display immediately
+      }
     }
-
-    if (rightButton.wasPressed())
+    else
     {
-      // Move to next step
-      int currentStep = player.getCurrentStep();
-      int newStep = (currentStep + 1) % mainSequence.getLength();
-      player.setCurrentStep(newStep);
+      // Play mode: use left/right buttons to adjust sequence length
+      if (leftButton.wasReleased())
+      {
+        // Decrease sequence length (minimum 1 step)
+        int currentLength = mainSequence.getLength();
+        if (currentLength > 1)
+        {
+          mainSequence.setLength(currentLength - 1);
 
-      // Play the note and update CV output
-      setCVNote(mainSequence.getNote(newStep));
-      drawUI(); // Refresh display immediately
+          // If current step is beyond new length, wrap to beginning
+          if (player.getCurrentStep() >= mainSequence.getLength())
+          {
+            player.setCurrentStep(0);
+            setCVNote(mainSequence.getNote(0));
+          }
+
+          drawUI(); // Refresh display immediately
+        }
+      }
+
+      if (rightButton.wasReleased())
+      {
+        // Increase sequence length (up to maximum)
+        int currentLength = mainSequence.getLength();
+        if (currentLength < mainSequence.getMaxLength())
+        {
+          mainSequence.setLength(currentLength + 1);
+          drawUI(); // Refresh display immediately
+        }
+      }
     }
   }
 
@@ -324,6 +433,27 @@ void update(float dt)
   leftLED.update(dt);
   rightLED.update(dt);
   cvGate.update(dt);
+}
+
+/**
+ * @brief Convert scale type number to scale name string
+ * @param scaleType Scale type number (0-9)
+ * @param scaleStr Output string buffer (must be at least 16 chars)
+ */
+void scaleTypeToString(int scaleType, char *scaleStr)
+{
+  const char *scaleNames[] = {
+      "Major", "Minor", "Harm Min", "Lydian", "Mixolyd",
+      "Dorian", "Phrygian", "Pent Maj", "Pent Min", "Blues"};
+
+  if (scaleType >= 0 && scaleType <= 9)
+  {
+    strcpy(scaleStr, scaleNames[scaleType]);
+  }
+  else
+  {
+    strcpy(scaleStr, "Unknown");
+  }
 }
 
 void loop()
