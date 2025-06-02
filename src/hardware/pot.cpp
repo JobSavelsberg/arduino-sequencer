@@ -1,8 +1,8 @@
 #include "hardware/pot.h"
 
-Pot::Pot(int analogPin, unsigned long interval, int smoothingSamples) 
-    : pin(analogPin), lastRawValue(0), lastMappedValue(0.0), lastReadTime(0), 
-      readInterval(interval), smoothingWindow(smoothingSamples), readIndex(0), 
+Pot::Pot(int analogPin, unsigned long interval, int smoothingSamples)
+    : pin(analogPin), lastRawValue(0), lastMappedValue(0.0), lastReadTime(0),
+      readInterval(interval), smoothingWindow(smoothingSamples), readIndex(0),
       total(0), useSmoothing(smoothingSamples > 1)
 {
     if (useSmoothing)
@@ -30,11 +30,11 @@ Pot::~Pot()
 void Pot::update()
 {
     unsigned long currentTime = millis();
-    
+
     if (currentTime - lastReadTime >= readInterval)
     {
         int rawReading = analogRead(pin);
-        
+
         if (useSmoothing)
         {
             // Subtract the last reading
@@ -52,7 +52,7 @@ void Pot::update()
         {
             lastRawValue = rawReading;
         }
-        
+
         lastReadTime = currentTime;
     }
 }

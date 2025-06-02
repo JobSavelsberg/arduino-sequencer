@@ -3,13 +3,12 @@
 #include "hardware/led.h"
 #include "hardware/button.h"
 #include "hardware/pot.h"
+#include "sequence.h"
+#include "sequencePlayer.h"
 
 const float MAX_VOLTAGE = 5.0; // Maximum output voltage for CV
-
 // Note that corresponds to 0V output in MIDI terms
 const int BASE_0V_NOTE = 36; // C2
-
-float bpm = 120.0; // Current beats per minute
 
 // LEDs
 LED leftLED(12);
@@ -23,6 +22,10 @@ Pot timingPot(3);
 
 // CV output
 PWM cvOutPitch(9, MAX_VOLTAGE);
+
+// Sequence and player objects
+Sequence mainSequence(16);                   // 16-step sequence
+SequencePlayer player(&mainSequence, 120.0); // Player with 120 BPM
 
 /**
  * @brief Convert MIDI note number to CV output voltage (1V per octave)
@@ -39,16 +42,18 @@ void setCVNote(int note)
   cvOutPitch.setDutyCycle(dutyCycle);             // Set PWM duty cycle based on voltage
 }
 
-// Major C2 to C3 scale in MIDI notes
-int midiNotes[] = {36, 38, 40, 41, 43, 45, 47, 48};            // MIDI note numbers for C2 to C3 major scale
-const int numNotes = sizeof(midiNotes) / sizeof(midiNotes[0]); // Number of notes in the scale
-
-unsigned long previousNoteTime = 0; // Timestamp of the last note played
-int currentNoteIndex = 0;           // Index of the current note in the scale
-
 void setup()
 {
   cvOutPitch.setup(20000); // Initialize PWM hardware with default 20kHz frequency
+
+  // Initialize the sequence with a major scale manually
+  int majorScale[] = {36, 38, 40, 41, 43, 45, 47, 48}; // C2 major scale
+  int scaleLength = sizeof(majorScale) / sizeof(majorScale[0]);
+  mainSequence.setNotes(majorScale, scaleLength);
+
+  // Set up the callback and start the player
+  player.onStepAdvance(onSequencerStep);
+  player.start();
 }
 
 void updateInputs()
@@ -59,8 +64,8 @@ void updateInputs()
 
 void updateOutputs()
 {
-  // Update the CV output based on the current note
-  setCVNote(midiNotes[currentNoteIndex]);
+  // Update the CV output based on the current note in the sequence
+  setCVNote(player.getCurrentNote());
 
   leftLED.update();
   rightLED.update();
@@ -71,40 +76,39 @@ void loop()
   // Update inputs
   updateInputs();
 
-  unsigned long currentTime = millis();
-  unsigned long noteDuration = (60000.0 / bpm); // Duration of a quarter note in milliseconds (using integer)
-
-  // Check if it's time to play the next note
-  if (currentTime - previousNoteTime >= noteDuration)
-  {
-    // Play the current note on pin 9
-    setCVNote(midiNotes[currentNoteIndex]);
-
-    // Turn on LED for beat indication
-    rightLED.blink(noteDuration / 8);
-
-    if (currentNoteIndex == 0)
-    {
-      leftLED.blink(noteDuration / 4); // Longer blink for first beat
-    }
-
-    // Move to the next note
-    currentNoteIndex = (currentNoteIndex + 1) % numNotes;
-    // Update the time of the last note
-    previousNoteTime = currentTime;
-  }
+  // Update the player (handles timing and callbacks)
+  player.update();
 
   // Update BPM from potentiometer
-  bpm = timingPot.getLogValue(60.0, 1000.0, 2.0);
+  player.setBpm(timingPot.getLogValue(60.0, 1000.0, 2.0));
 
   // Reset when the button is pressed
   if (playButton.wasPressed())
   {
-    currentNoteIndex = 0;                   // Reset to the first note
-    previousNoteTime = currentTime;         // Reset the timer
-    setCVNote(midiNotes[currentNoteIndex]); // Play the first note immediately on pin 9
+    player.reset();                     // Reset to the first step
+    setCVNote(player.getCurrentNote()); // Play the first note immediately
   }
 
   // Update outputs
   updateOutputs();
+}
+
+/**
+ * @brief Callback function called when the sequencer advances to a new step
+ * @param currentStep The current step index (0-based)
+ * @param currentNote The MIDI note number for this step
+ * @param noteDuration Duration of the note in milliseconds
+ */
+void onSequencerStep(int currentStep, int currentNote, unsigned long noteDuration)
+{
+  // Play the current note
+  setCVNote(currentNote);
+
+  // Turn on LED for beat indication
+  rightLED.blink(noteDuration / 8);
+
+  if (currentStep == 0)
+  {
+    leftLED.blink(noteDuration / 4); // Longer blink for first beat
+  }
 }
