@@ -42,11 +42,6 @@ void setCVNote(int note)
   cvOutPitch.setDutyCycle(dutyCycle);             // Set PWM duty cycle based on voltage
 }
 
-// Forward declarations
-void updateInputs(double dt);
-void updateOutputs(double dt);
-void update(double dt);
-
 /**
  * @brief Callback function called when the sequencer advances to a new step
  * @param currentStep The current step index (0-based)
