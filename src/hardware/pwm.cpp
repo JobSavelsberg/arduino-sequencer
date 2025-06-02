@@ -1,6 +1,6 @@
 #include "hardware/pwm.h"
 
-PWM::PWM(int pwmPin) : pin(pwmPin), initialized(false)
+PWM::PWM(int pwmPin, float maxVoltage) : pin(pwmPin), maxVoltage(maxVoltage), initialized(false)
 {
     // Only support pin 9 for now
     if (pin != 9)
@@ -57,4 +57,19 @@ void PWM::setDutyCycle(float duty_cycle)
     // Calculate OCR1A value based on normalized duty cycle (0.0 - 1.0)
     unsigned int duty_value = (ICR1 * duty_cycle);
     OCR1A = duty_value;
+}
+
+void PWM::setVoltage(float voltage)
+{
+    if (!initialized || pin != 9)
+        return;
+
+    // Clamp voltage to the range [0, maxVoltage]
+    float clampedVoltage = constrain(voltage, 0.0, maxVoltage);
+
+    // Calculate normalized duty cycle (0.0 - 1.0)
+    float dutyCycle = clampedVoltage / maxVoltage;
+
+    // Set the PWM duty cycle
+    setDutyCycle(dutyCycle);
 }

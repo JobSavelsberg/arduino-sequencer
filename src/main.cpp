@@ -2,12 +2,7 @@
 #include "hardware/pwm.h"
 #include "hardware/led.h"
 #include "hardware/button.h"
-
-#define POT_A A3 // Pin for BPM input (potentiometer)
-#define POT_B A2 // Pin for additional potentiometer
-#define POT_C A1 // Pin for selector potentiometer
-
-#define PLAY_BUTTON 2 // Pin for play/stop button
+#include "hardware/pot.h"
 
 const float MAX_VOLTAGE = 5.0; // Maximum output voltage for CV
 
@@ -16,30 +11,18 @@ const int BASE_0V_NOTE = 36; // C2
 
 float bpm = 120.0; // Current beats per minute
 
-// LED controllers
+// LEDs
 LED leftLED(12);
 LED rightLED(13);
 
-// Button controller
-Button playButton(PLAY_BUTTON);
+// Buttons
+Button playButton(2);
 
-PWM cvOutPitch(9); // PWM output for CV pitch control
+// Potentiometers
+Pot timingPot(3);
 
-/**
- * @brief Read potentiometer with logarithmic curve mapping
- * @param pin Analog pin to read from (0-1023)
- * @param minValue Minimum output value
- * @param maxValue Maximum output value
- * @param curve Logarithmic curve factor (1.0 = linear, 2.0 = quadratic, etc.)
- * @return Mapped value between minValue and maxValue using logarithmic curve
- */
-float readLogPot(int pin, float minValue, float maxValue, float curve = 2.0)
-{
-  int analogValue = analogRead(pin);
-  float normalizedValue = (float)analogValue / 1023.0;
-  float logValue = pow(normalizedValue, curve);
-  return minValue + logValue * (maxValue - minValue);
-}
+// CV output
+PWM cvOutPitch(9, MAX_VOLTAGE);
 
 /**
  * @brief Convert MIDI note number to CV output voltage (1V per octave)
@@ -60,18 +43,34 @@ void setCVNote(int note)
 int midiNotes[] = {36, 38, 40, 41, 43, 45, 47, 48};            // MIDI note numbers for C2 to C3 major scale
 const int numNotes = sizeof(midiNotes) / sizeof(midiNotes[0]); // Number of notes in the scale
 
-unsigned long previousNoteTime = 0;         // Timestamp of the last note played
-int currentNoteIndex = 0;                   // Index of the current note in the scale
-unsigned long lastBPMRead = 0;              // Timestamp of last BPM reading
-const unsigned long BPM_READ_INTERVAL = 50; // Read BPM every 50ms
+unsigned long previousNoteTime = 0; // Timestamp of the last note played
+int currentNoteIndex = 0;           // Index of the current note in the scale
 
 void setup()
 {
   cvOutPitch.setup(20000); // Initialize PWM hardware with default 20kHz frequency
 }
 
+void updateInputs()
+{
+  timingPot.update();
+  playButton.update();
+}
+
+void updateOutputs()
+{
+  // Update the CV output based on the current note
+  setCVNote(midiNotes[currentNoteIndex]);
+
+  leftLED.update();
+  rightLED.update();
+}
+
 void loop()
 {
+  // Update inputs
+  updateInputs();
+
   unsigned long currentTime = millis();
   unsigned long noteDuration = (60000.0 / bpm); // Duration of a quarter note in milliseconds (using integer)
 
@@ -95,19 +94,8 @@ void loop()
     previousNoteTime = currentTime;
   }
 
-  // Update LED controllers (handles blink timing automatically)
-  leftLED.update();
-  rightLED.update();
-
-  // Update button controller
-  playButton.update();
-
-  // Update BPM from potentiometer only occasionally to avoid timing jitter
-  if (currentTime - lastBPMRead >= BPM_READ_INTERVAL)
-  {
-    bpm = readLogPot(POT_A, 60.0, 1000.0, 2.0);
-    lastBPMRead = currentTime;
-  }
+  // Update BPM from potentiometer
+  bpm = timingPot.getLogValue(60.0, 1000.0, 2.0);
 
   // Reset when the button is pressed
   if (playButton.wasPressed())
@@ -116,4 +104,7 @@ void loop()
     previousNoteTime = currentTime;         // Reset the timer
     setCVNote(midiNotes[currentNoteIndex]); // Play the first note immediately on pin 9
   }
+
+  // Update outputs
+  updateOutputs();
 }
