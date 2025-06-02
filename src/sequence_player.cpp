@@ -51,15 +51,15 @@ void SequencePlayer::update(double dt)
 
     if (time >= getNoteDurationSeconds())
     {
+        // Advance to the next step
+        currentStepIndex = (currentStepIndex + 1) % sequence->getLength();
+        time = 0; // Reset accumulator for next note
+
         // Call the callback if it's set
         if (stepCallback)
         {
             stepCallback(currentStepIndex, getCurrentNote(), getNoteDurationSeconds());
         }
-
-        // Advance to the next step
-        currentStepIndex = (currentStepIndex + 1) % sequence->getLength();
-        time = 0; // Reset accumulator for next note
     }
 }
 
