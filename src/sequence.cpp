@@ -84,3 +84,53 @@ void Sequence::clear()
     }
     currentNumNotes = 0;
 }
+
+void Sequence::transpose(int semitones)
+{
+    // Find the current highest and lowest notes in the sequence
+    int minNote = 127, maxNote = 0;
+    bool hasNotes = false;
+    for (int i = 0; i < currentNumNotes; i++)
+    {
+        if (notes[i] > 0) // Only consider non-zero notes
+        {
+            hasNotes = true;
+            if (notes[i] < minNote)
+                minNote = notes[i];
+            if (notes[i] > maxNote)
+                maxNote = notes[i];
+        }
+    }
+
+    // If no notes, nothing to transpose
+    if (!hasNotes)
+        return;
+
+    // CV output range constraints (BASE_0V_NOTE = 36, MAX = 96 for 5V range)
+    const int CV_MIN_NOTE = 36; // C2 - corresponds to 0V
+    const int CV_MAX_NOTE = 96; // C6 - corresponds to 5V (5 octaves)
+
+    // Clamp semitones to prevent going out of usable CV range
+    if (semitones > 0 && maxNote + semitones > CV_MAX_NOTE)
+    {
+        semitones = CV_MAX_NOTE - maxNote;
+    }
+    else if (semitones < 0 && minNote + semitones < CV_MIN_NOTE)
+    {
+        semitones = CV_MIN_NOTE - minNote;
+    }
+
+    // Apply the transposition
+    for (int i = 0; i < currentNumNotes; i++)
+    {
+        if (notes[i] > 0) // Only transpose non-zero notes
+        {
+            notes[i] += semitones;
+            // Clamp to CV output range
+            if (notes[i] < CV_MIN_NOTE)
+                notes[i] = CV_MIN_NOTE;
+            else if (notes[i] > CV_MAX_NOTE)
+                notes[i] = CV_MAX_NOTE;
+        }
+    }
+}

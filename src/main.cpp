@@ -41,6 +41,9 @@ static float lastBpmChangeTime = 0.0f;
 static float totalTime = 0.0f;
 const float BPM_DISPLAY_DURATION = 3.0f; // Show BPM for 3 seconds after change
 
+// Transpose tracking
+static int currentTranspose = 0; // Current transpose amount in semitones
+
 /**
  * @brief Convert MIDI note number to note name string (e.g., "C#3")
  * @param midiNote MIDI note number (0-127)
@@ -177,9 +180,9 @@ void setup()
   oledDisplay.getU8g2().setFont(u8g2_font_6x10_tf); // Set default font
 
   // Initialize the sequence with a major scale manually
-  int majorScale[] = {36, 38, 40, 41, 43, 45, 47, 48}; // C2 major scale
-  int scaleLength = sizeof(majorScale) / sizeof(int);
-  mainSequence.setNotes(majorScale, scaleLength);
+  int sequence[] = {36, 38, 40, 41, 43, 45, 47, 48}; // C2 major scale
+  int sequenceLength = sizeof(sequence) / sizeof(int);
+  mainSequence.setNotes(sequence, sequenceLength);
   // Set up the callback and start the player
   player.onStepAdvance(onSequencerStep);
   player.start();
@@ -204,11 +207,10 @@ void update(float dt)
   {
     player.setBpm(newBpm);
     lastBpmChangeTime = totalTime; // Record when BPM was changed
-  }
-  // Update pitch from potentiometer when not playing (edit mode)
+  } // Update pitch from potentiometer
   if (!player.getIsPlaying())
   {
-    // Use modulation pot to control pitch range (1-5 octaves)
+    // Edit mode: Use modulation pot to control pitch range (1-5 octaves)
     float pitchRange = modulationPot.getLinearValue(1.0, 5.0); // 1 to 5 octaves
     int octaveRange = (int)(pitchRange * 12);                  // Convert to semitones
 
@@ -220,17 +222,44 @@ void update(float dt)
       drawUI();           // Refresh display immediately
     }
   }
+  else
+  {
+    // Playing mode: Use pitch pot to transpose entire sequence
+    // Range of +/- 1 octave (12 semitones) for better control
+    int newTranspose = (int)pitchPot.getLinearValue(-12, 12);
+    if (pitchPot.hasChanged(5)) // Only update if significant change
+    {
+      int transposeChange = newTranspose - currentTranspose;
+      if (transposeChange != 0)
+      {
+        mainSequence.transpose(transposeChange);
+        currentTranspose = newTranspose;
 
+        setCVNote(mainSequence.getNote(player.getCurrentStep())); // Update CV output to current note
+
+        drawUI(); // Refresh display immediately
+      }
+    }
+  }
   // Check if the play button was pressed
   if (playButton.wasPressed())
   {
     if (player.getIsPlaying())
     {
       player.stop(); // Pause if currently playing
+      // Reset transpose when stopping
+      if (currentTranspose != 0)
+      {
+        mainSequence.transpose(-currentTranspose); // Undo current transpose
+        currentTranspose = 0;
+        drawUI(); // Refresh display
+      }
     }
     else
     {
       player.start(); // Resume/start if currently stopped
+      // Reset transpose when starting
+      currentTranspose = 0;
     }
   }
 

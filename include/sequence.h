@@ -21,6 +21,7 @@ public:
     int getLength();
     int getMaxLength();
     void clear();
+    void transpose(int semitones);
 };
 
 #endif // SEQUENCE_H
