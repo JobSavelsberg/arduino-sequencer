@@ -1,4 +1,4 @@
-#include "sequencePlayer.h"
+#include "sequence_player.h"
 #include <Arduino.h>
 
 SequencePlayer::SequencePlayer(Sequence *seq, float initialBpm)

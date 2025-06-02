@@ -4,7 +4,7 @@
 #include "hardware/button.h"
 #include "hardware/pot.h"
 #include "sequence.h"
-#include "sequencePlayer.h"
+#include "sequence_player.h"
 
 const float MAX_VOLTAGE = 5.0; // Maximum output voltage for CV
 // Note that corresponds to 0V output in MIDI terms
@@ -40,6 +40,26 @@ void setCVNote(int note)
   float clampedVoltage = constrain(voltage, 0.0, MAX_VOLTAGE);
   float dutyCycle = clampedVoltage / MAX_VOLTAGE; // Normalize to 0.0 - 1.0 range
   cvOutPitch.setDutyCycle(dutyCycle);             // Set PWM duty cycle based on voltage
+}
+
+/**
+ * @brief Callback function called when the sequencer advances to a new step
+ * @param currentStep The current step index (0-based)
+ * @param currentNote The MIDI note number for this step
+ * @param noteDuration Duration of the note in milliseconds
+ */
+void onSequencerStep(int currentStep, int currentNote, unsigned long noteDuration)
+{
+  // Play the current note
+  setCVNote(currentNote);
+
+  // Turn on LED for beat indication
+  rightLED.blink(noteDuration / 8);
+
+  if (currentStep == 0)
+  {
+    leftLED.blink(noteDuration / 4); // Longer blink for first beat
+  }
 }
 
 void setup()
@@ -91,24 +111,4 @@ void loop()
 
   // Update outputs
   updateOutputs();
-}
-
-/**
- * @brief Callback function called when the sequencer advances to a new step
- * @param currentStep The current step index (0-based)
- * @param currentNote The MIDI note number for this step
- * @param noteDuration Duration of the note in milliseconds
- */
-void onSequencerStep(int currentStep, int currentNote, unsigned long noteDuration)
-{
-  // Play the current note
-  setCVNote(currentNote);
-
-  // Turn on LED for beat indication
-  rightLED.blink(noteDuration / 8);
-
-  if (currentStep == 0)
-  {
-    leftLED.blink(noteDuration / 4); // Longer blink for first beat
-  }
 }
