@@ -9,8 +9,8 @@ private:
     int pin;
     int lastRawValue;
     float lastMappedValue;
-    double timeAccumulator; // Time accumulated since last read in seconds
-    double readInterval;    // Read interval in seconds
+    double time;         // Time accumulated since last read in seconds
+    double readInterval; // Read interval in seconds
     int smoothingWindow;
     int *readings;
     int readIndex;
@@ -18,7 +18,7 @@ private:
     bool useSmoothing;
 
 public:
-    Pot(int analogPin, double intervalSeconds = 0.05, int smoothingSamples = 10);
+    Pot(int analogPin, double intervalSeconds = 0.01, int smoothingSamples = 3);
     ~Pot();
     void update(double dt); // dt is delta time in seconds
     int getRawValue();

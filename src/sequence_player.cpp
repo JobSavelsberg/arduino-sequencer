@@ -1,14 +1,14 @@
 #include "sequence_player.h"
 
 SequencePlayer::SequencePlayer(Sequence *seq, float initialBpm)
-    : sequence(seq), currentStepIndex(0), timeAccumulator(0), isPlaying(false), bpm(initialBpm), stepCallback(nullptr)
+    : sequence(seq), currentStepIndex(0), time(0), isPlaying(false), bpm(initialBpm), stepCallback(nullptr)
 {
 }
 
 void SequencePlayer::start()
 {
     isPlaying = true;
-    timeAccumulator = 0;
+    time = 0;
 }
 
 void SequencePlayer::stop()
@@ -19,7 +19,7 @@ void SequencePlayer::stop()
 void SequencePlayer::reset()
 {
     currentStepIndex = 0;
-    timeAccumulator = 0;
+    time = 0;
 }
 
 bool SequencePlayer::getIsPlaying()
@@ -47,9 +47,9 @@ void SequencePlayer::update(double dt)
         return;
     }
 
-    timeAccumulator += dt;
+    time += dt;
 
-    if (timeAccumulator >= getNoteDurationSeconds())
+    if (time >= getNoteDurationSeconds())
     {
         // Call the callback if it's set
         if (stepCallback)
@@ -59,7 +59,7 @@ void SequencePlayer::update(double dt)
 
         // Advance to the next step
         currentStepIndex = (currentStepIndex + 1) % sequence->getLength();
-        timeAccumulator = 0; // Reset accumulator for next note
+        time = 0; // Reset accumulator for next note
     }
 }
 

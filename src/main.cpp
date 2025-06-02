@@ -18,7 +18,7 @@ LED rightLED(13);
 Button playButton(2);
 
 // Potentiometers
-Pot timingPot(3, 0.05); // 50ms read interval in seconds
+Pot timingPot(3, 0.01); // 10ms read interval in seconds
 
 // CV output
 PWM cvOutPitch(9, MAX_VOLTAGE);
@@ -68,7 +68,7 @@ void setup()
 
   // Initialize the sequence with a major scale manually
   int majorScale[] = {36, 38, 40, 41, 43, 45, 47, 48}; // C2 major scale
-  int scaleLength = sizeof(majorScale) / sizeof(majorScale[0]);
+  int scaleLength = sizeof(majorScale) / sizeof(int);
   mainSequence.setNotes(majorScale, scaleLength);
   // Set up the callback and start the player
   player.onStepAdvance(onSequencerStep);
@@ -81,9 +81,6 @@ void update(double dt)
   timingPot.update(dt);
   playButton.update(dt);
 
-  // Update the player with the time delta
-  player.update(dt);
-
   // Update BPM from potentiometer
   player.setBpm(timingPot.getLogValue(60.0, 1000.0, 2.0));
 
@@ -93,11 +90,10 @@ void update(double dt)
     player.reset(); // Reset to the first step
   }
 
+  // Update the player with the time delta
+  player.update(dt);
+
   // Update outputs
-
-  // Update the CV output based on the current note in the sequence
-  setCVNote(player.getCurrentNote());
-
   leftLED.update(dt);
   rightLED.update(dt);
 }

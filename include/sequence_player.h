@@ -11,7 +11,7 @@ class SequencePlayer
 private:
     Sequence *sequence;        // Pointer to the sequence being played
     int currentStepIndex;      // Current step in the sequence
-    double timeAccumulator;    // Time accumulated since last step in seconds
+    double time;               // Time accumulated since last step in seconds
     bool isPlaying;            // Whether the player is currently playing
     float bpm;                 // Current beats per minute
     StepCallback stepCallback; // Callback function for step events
