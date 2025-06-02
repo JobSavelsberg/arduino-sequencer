@@ -1,7 +1,7 @@
 #include "hardware/pot.h"
 
-Pot::Pot(int analogPin, double intervalSeconds, int smoothingSamples)
-    : pin(analogPin), lastRawValue(0), lastMappedValue(0.0), time(0),
+Pot::Pot(int analogPin, float intervalSeconds, int smoothingSamples)
+    : pin(analogPin), lastRawValue(0), lastCheckedValue(0), lastMappedValue(0.0f), time(0),
       readInterval(intervalSeconds), smoothingWindow(smoothingSamples), readIndex(0),
       total(0), useSmoothing(smoothingSamples > 1)
 {
@@ -27,7 +27,7 @@ Pot::~Pot()
     }
 }
 
-void Pot::update(double dt)
+void Pot::update(float dt)
 {
     time += dt;
 
@@ -77,7 +77,6 @@ float Pot::getLogValue(float minValue, float maxValue, float curve)
 
 bool Pot::hasChanged(int threshold)
 {
-    static int lastCheckedValue = lastRawValue;
     bool changed = abs(lastRawValue - lastCheckedValue) >= threshold;
     if (changed)
     {
@@ -86,7 +85,7 @@ bool Pot::hasChanged(int threshold)
     return changed;
 }
 
-void Pot::setReadInterval(double intervalSeconds)
+void Pot::setReadInterval(float intervalSeconds)
 {
     readInterval = intervalSeconds;
 }

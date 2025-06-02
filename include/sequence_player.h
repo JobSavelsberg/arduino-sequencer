@@ -4,21 +4,21 @@
 #include "sequence.h"
 
 // Callback function type for step events
-typedef void (*StepCallback)(int currentStep, int currentNote, double noteDurationSeconds);
+typedef void (*StepCallback)(int currentStep, int currentNote, float noteDurationSeconds);
 
 class SequencePlayer
 {
 private:
     Sequence *sequence;        // Pointer to the sequence being played
     int currentStepIndex;      // Current step in the sequence
-    double time;               // Time accumulated since last step in seconds
+    float time;                // Time accumulated since last step in seconds
     bool isPlaying;            // Whether the player is currently playing
     float bpm;                 // Current beats per minute
     StepCallback stepCallback; // Callback function for step events
 
 public:
     // Constructor
-    SequencePlayer(Sequence *seq, float initialBpm = 120.0);
+    SequencePlayer(Sequence *seq, float initialBpm = 120.0f);
 
     // Playback control
     void start();
@@ -27,7 +27,7 @@ public:
     bool getIsPlaying();
 
     // Update function - call this regularly to handle timing
-    void update(double dt); // dt is delta time in seconds
+    void update(float dt); // dt is delta time in seconds
 
     // Step management
     int getCurrentStep();
@@ -36,7 +36,7 @@ public:
     // Timing
     void setBpm(float newBpm);
     float getBpm();
-    double getNoteDurationSeconds(); // Returns note duration in seconds
+    float getNoteDurationSeconds(); // Returns note duration in seconds
 
     // Get current note
     int getCurrentNote();

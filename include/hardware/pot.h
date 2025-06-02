@@ -8,9 +8,10 @@ class Pot
 private:
     int pin;
     int lastRawValue;
+    int lastCheckedValue; // For hasChanged() tracking - instance variable, not static
     float lastMappedValue;
-    double time;         // Time accumulated since last read in seconds
-    double readInterval; // Read interval in seconds
+    float time;         // Time accumulated since last read in seconds
+    float readInterval; // Read interval in seconds
     int smoothingWindow;
     int *readings;
     int readIndex;
@@ -18,14 +19,14 @@ private:
     bool useSmoothing;
 
 public:
-    Pot(int analogPin, double intervalSeconds = 0.01, int smoothingSamples = 3);
+    Pot(int analogPin, float intervalSeconds = 0.01f, int smoothingSamples = 3);
     ~Pot();
-    void update(double dt); // dt is delta time in seconds
+    void update(float dt); // dt is delta time in seconds
     int getRawValue();
     float getLinearValue(float minValue = 0.0, float maxValue = 1.0);
     float getLogValue(float minValue = 0.0, float maxValue = 1.0, float curve = 2.0);
     bool hasChanged(int threshold = 5);
-    void setReadInterval(double intervalSeconds);
+    void setReadInterval(float intervalSeconds);
 };
 
 #endif // POT_H

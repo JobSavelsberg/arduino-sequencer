@@ -1,7 +1,7 @@
 #include "hardware/button.h"
 
 Button::Button(int buttonPin, bool usePullup)
-    : pin(buttonPin), lastState(HIGH), currentState(HIGH), debounceTimer(0), debounceDelay(0.05) // 50ms as seconds
+    : pin(buttonPin), lastState(HIGH), currentState(HIGH), lastPressedState(false), debounceTimer(0), debounceDelay(0.05f) // 50ms as seconds
 {
     if (usePullup)
     {
@@ -13,7 +13,7 @@ Button::Button(int buttonPin, bool usePullup)
     }
 }
 
-void Button::update(double dt)
+void Button::update(float dt)
 {
     bool reading = digitalRead(pin);
 
@@ -44,18 +44,16 @@ bool Button::isPressed()
 
 bool Button::wasPressed()
 {
-    static bool lastPressed = false;
     bool pressed = isPressed();
-    bool result = pressed && !lastPressed;
-    lastPressed = pressed;
+    bool result = pressed && !lastPressedState;
+    lastPressedState = pressed;
     return result;
 }
 
 bool Button::wasReleased()
 {
-    static bool lastPressed = false;
     bool pressed = isPressed();
-    bool result = !pressed && lastPressed;
-    lastPressed = pressed;
+    bool result = !pressed && lastPressedState;
+    lastPressedState = pressed;
     return result;
 }

@@ -18,7 +18,7 @@ void LED::off()
     digitalWrite(pin, LOW);
 }
 
-void LED::blink(double duration)
+void LED::blink(float duration)
 {
     isBlinking = true;
     blinkStart = 0;           // Start from 0 and count up
@@ -26,7 +26,7 @@ void LED::blink(double duration)
     digitalWrite(pin, HIGH);
 }
 
-void LED::update(double dt)
+void LED::update(float dt)
 {
     if (isBlinking)
     {

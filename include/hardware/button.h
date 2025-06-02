@@ -9,12 +9,13 @@ private:
     int pin;
     bool lastState;
     bool currentState;
-    double debounceTimer; // Time accumulated for debouncing in seconds
-    double debounceDelay; // Debounce delay in seconds
+    bool lastPressedState; // Track previous pressed state for wasPressed/wasReleased
+    float debounceTimer;   // Time accumulated for debouncing in seconds
+    float debounceDelay;   // Debounce delay in seconds
 
 public:
     Button(int buttonPin, bool usePullup = true);
-    void update(double dt); // dt is delta time in seconds
+    void update(float dt); // dt is delta time in seconds
     bool isPressed();
     bool wasPressed();
     bool wasReleased();

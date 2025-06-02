@@ -1,14 +1,14 @@
 #include "sequence_player.h"
 
 SequencePlayer::SequencePlayer(Sequence *seq, float initialBpm)
-    : sequence(seq), currentStepIndex(0), time(0), isPlaying(false), bpm(initialBpm), stepCallback(nullptr)
+    : sequence(seq), currentStepIndex(0), time(0.0f), isPlaying(false), bpm(initialBpm), stepCallback(nullptr)
 {
 }
 
 void SequencePlayer::start()
 {
     isPlaying = true;
-    time = 0;
+    time = 0.0f;
 }
 
 void SequencePlayer::stop()
@@ -19,7 +19,7 @@ void SequencePlayer::stop()
 void SequencePlayer::reset()
 {
     currentStepIndex = 0;
-    time = 0;
+    time = 0.0f;
 }
 
 bool SequencePlayer::getIsPlaying()
@@ -40,7 +40,7 @@ void SequencePlayer::setCurrentStep(int step)
     }
 }
 
-void SequencePlayer::update(double dt)
+void SequencePlayer::update(float dt)
 {
     if (!isPlaying || !sequence || sequence->getLength() == 0)
     {
@@ -76,9 +76,9 @@ float SequencePlayer::getBpm()
     return bpm;
 }
 
-double SequencePlayer::getNoteDurationSeconds()
+float SequencePlayer::getNoteDurationSeconds()
 {
-    return 60.0 / bpm; // Duration of a quarter note in seconds
+    return 60.0f / bpm; // Duration of a quarter note in seconds
 }
 
 int SequencePlayer::getCurrentNote()

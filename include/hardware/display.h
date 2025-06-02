@@ -8,7 +8,7 @@
 class Display
 {
 private:
-    U8G2_SSD1306_128X64_NONAME_F_HW_I2C u8g2;
+    U8G2_SSD1306_128X64_NONAME_1_HW_I2C u8g2; // Use page buffer mode instead of full buffer
     bool initialized;
 
 public:
@@ -20,7 +20,7 @@ public:
     void setup(unsigned long i2cSpeed = 400000);
 
     // Direct access to U8g2 instance for drawing operations
-    U8G2_SSD1306_128X64_NONAME_F_HW_I2C &getU8g2() { return u8g2; }
+    U8G2_SSD1306_128X64_NONAME_1_HW_I2C &getU8g2() { return u8g2; }
 
     bool isInitialized() const { return initialized; }
 };
