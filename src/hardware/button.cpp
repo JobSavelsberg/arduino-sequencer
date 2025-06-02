@@ -1,6 +1,7 @@
 #include "hardware/button.h"
 
-Button::Button(int buttonPin, bool usePullup) : pin(buttonPin), lastState(HIGH), currentState(HIGH), lastDebounceTime(0), debounceDelay(50)
+Button::Button(int buttonPin, bool usePullup)
+    : pin(buttonPin), lastState(HIGH), currentState(HIGH), debounceTimer(0), debounceDelay(0.05) // 50ms as seconds
 {
     if (usePullup)
     {
@@ -12,16 +13,20 @@ Button::Button(int buttonPin, bool usePullup) : pin(buttonPin), lastState(HIGH),
     }
 }
 
-void Button::update()
+void Button::update(double dt)
 {
     bool reading = digitalRead(pin);
 
     if (reading != lastState)
     {
-        lastDebounceTime = millis();
+        debounceTimer = 0; // Reset timer when state changes
+    }
+    else
+    {
+        debounceTimer += dt; // Accumulate time when state is stable
     }
 
-    if ((millis() - lastDebounceTime) > debounceDelay)
+    if (debounceTimer > debounceDelay)
     {
         if (reading != currentState)
         {

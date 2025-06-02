@@ -1,6 +1,6 @@
 #include "hardware/led.h"
 
-LED::LED(int ledPin) : pin(ledPin), isBlinking(false)
+LED::LED(int ledPin) : pin(ledPin), blinkStart(0), blinkDuration(0), isBlinking(false)
 {
     pinMode(pin, OUTPUT);
     digitalWrite(pin, LOW);
@@ -18,19 +18,23 @@ void LED::off()
     digitalWrite(pin, LOW);
 }
 
-void LED::blink(unsigned long duration)
+void LED::blink(double duration)
 {
     isBlinking = true;
-    blinkStart = millis();
-    blinkDuration = duration;
+    blinkStart = 0;           // Start from 0 and count up
+    blinkDuration = duration; // Duration in seconds
     digitalWrite(pin, HIGH);
 }
 
-void LED::update()
+void LED::update(double dt)
 {
-    if (isBlinking && (millis() - blinkStart >= blinkDuration))
+    if (isBlinking)
     {
-        digitalWrite(pin, LOW);
-        isBlinking = false;
+        blinkStart += dt; // Accumulate time
+        if (blinkStart >= blinkDuration)
+        {
+            digitalWrite(pin, LOW);
+            isBlinking = false;
+        }
     }
 }

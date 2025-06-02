@@ -1,15 +1,14 @@
 #include "sequence_player.h"
-#include <Arduino.h>
 
 SequencePlayer::SequencePlayer(Sequence *seq, float initialBpm)
-    : sequence(seq), currentStepIndex(0), lastStepTime(0), isPlaying(false), bpm(initialBpm), stepCallback(nullptr)
+    : sequence(seq), currentStepIndex(0), timeAccumulator(0), isPlaying(false), bpm(initialBpm), stepCallback(nullptr)
 {
 }
 
 void SequencePlayer::start()
 {
     isPlaying = true;
-    lastStepTime = millis();
+    timeAccumulator = 0;
 }
 
 void SequencePlayer::stop()
@@ -20,7 +19,7 @@ void SequencePlayer::stop()
 void SequencePlayer::reset()
 {
     currentStepIndex = 0;
-    lastStepTime = millis();
+    timeAccumulator = 0;
 }
 
 bool SequencePlayer::getIsPlaying()
@@ -41,25 +40,26 @@ void SequencePlayer::setCurrentStep(int step)
     }
 }
 
-void SequencePlayer::update()
+void SequencePlayer::update(double dt)
 {
     if (!isPlaying || !sequence || sequence->getLength() == 0)
     {
         return;
     }
 
-    unsigned long currentTime = millis();
-    if ((currentTime - lastStepTime) >= getNoteDuration())
+    timeAccumulator += dt;
+
+    if (timeAccumulator >= getNoteDurationSeconds())
     {
         // Call the callback if it's set
         if (stepCallback)
         {
-            stepCallback(currentStepIndex, getCurrentNote(), getNoteDuration());
+            stepCallback(currentStepIndex, getCurrentNote(), getNoteDurationSeconds());
         }
 
         // Advance to the next step
         currentStepIndex = (currentStepIndex + 1) % sequence->getLength();
-        lastStepTime = currentTime;
+        timeAccumulator = 0; // Reset accumulator for next note
     }
 }
 
@@ -76,9 +76,9 @@ float SequencePlayer::getBpm()
     return bpm;
 }
 
-unsigned long SequencePlayer::getNoteDuration()
+double SequencePlayer::getNoteDurationSeconds()
 {
-    return (unsigned long)(60000.0 / bpm); // Duration of a quarter note in milliseconds
+    return 60.0 / bpm; // Duration of a quarter note in seconds
 }
 
 int SequencePlayer::getCurrentNote()

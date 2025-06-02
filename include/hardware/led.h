@@ -7,16 +7,16 @@ class LED
 {
 private:
     int pin;
-    unsigned long blinkStart;
-    unsigned long blinkDuration;
+    double blinkStart;    // Time accumulated since blink started in seconds
+    double blinkDuration; // Duration of blink in seconds
     bool isBlinking;
 
 public:
     LED(int ledPin);
     void on();
     void off();
-    void blink(unsigned long duration);
-    void update();
+    void blink(double duration);
+    void update(double dt); // dt is delta time in seconds
 };
 
 #endif // LED_H
